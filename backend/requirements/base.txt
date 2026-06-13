@@ -1,0 +1,11 @@
+Django>=5.0,<6.0
+djangorestframework>=3.15
+django-tenants>=3.7
+celery>=5.4
+redis>=5.0
+django-celery-beat>=2.6
+djangorestframework-simplejwt>=5.3
+django-money>=3.0
+django-environ>=0.11
+django-extensions>=3.2
+python-dotenv>=1.0.0
