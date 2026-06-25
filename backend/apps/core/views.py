@@ -1,8 +1,12 @@
 from django.http import JsonResponse
+from django.db.models import Sum
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.finance.models import Invoice
+from apps.hr.models import Employee
+from apps.operations.models import Project
 from .permissions import IsTenantMember
 from .pagination import StandardResultsSetPagination
 from .mixins import TenantContextMixin
@@ -11,6 +15,25 @@ from .mixins import TenantContextMixin
 @api_view(['GET'])
 def health_check(request):
     return Response({'status': 'ok', 'service': 'SmallOrg Central API'})
+
+
+@api_view(['GET'])
+def dashboard_summary(request):
+    tenant = getattr(request, 'tenant', None)
+    if tenant is None:
+        return Response({'error': 'Tenant context required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    employees = Employee.objects.filter(tenant=tenant).count()
+    projects = Project.objects.filter(tenant=tenant).count()
+    pending_invoices = Invoice.objects.filter(tenant=tenant, status__in=['draft', 'sent', 'overdue']).count()
+    total_revenue = Invoice.objects.filter(tenant=tenant).aggregate(total=Sum('total_amount'))['total'] or 0
+
+    return Response({
+        'employees': employees,
+        'projects': projects,
+        'pending_invoices': pending_invoices,
+        'total_revenue': str(total_revenue),
+    })
 
 
 @api_view(['GET'])

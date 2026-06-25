@@ -1,10 +1,12 @@
 from django.urls import path, include
+from apps.core.views import dashboard_summary
 from apps.finance.views import JournalEntryViewSet
 from apps.operations.views import InventoryItemViewSet, LeadViewSet
 
 app_name = 'v1'
 
 urlpatterns = [
+    path('dashboard/summary/', dashboard_summary, name='dashboard-summary'),
     path('auth/', include('apps.users.urls')),
     path('tenants/', include('apps.tenants.urls')),
     path('authz/', include('apps.authz.urls')),

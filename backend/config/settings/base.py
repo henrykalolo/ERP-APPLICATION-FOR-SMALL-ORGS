@@ -78,6 +78,7 @@ DATABASES = {
 }
 
 TENANT_SYNC_ROUTER = 'config.routers.SqliteTenantSyncRouter'
+
 if os.getenv('SMALLORG_DISABLE_TENANT_ROUTER') == 'True':
     DATABASE_ROUTERS = []
 else:
