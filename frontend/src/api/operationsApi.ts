@@ -220,13 +220,6 @@ export const operationsApi = {
     },
   },
 
-  inventoryAdjustments: {
-    create: async (data: { inventory_item: number; quantity: number; movement_type?: string; reference?: string; notes?: string }) => {
-      const response = await apiClient.post('/inventory/adjustments/', data);
-      return response.data;
-    },
-  },
-
   inventory: {
     list: async () => {
       const response = await apiClient.get<InventoryItem[]>('/operations/inventory/');
@@ -249,6 +242,13 @@ export const operationsApi = {
     },
     get: async (id: number) => {
       const response = await apiClient.get<InventoryMovement>(`/operations/inventory-movements/${id}/`);
+      return response.data;
+    },
+  },
+
+  inventoryAdjustments: {
+    create: async (data: { inventory_item: number; quantity: number; movement_type?: string; reference?: string; notes?: string }) => {
+      const response = await apiClient.post('/inventory/adjustments/', data);
       return response.data;
     },
   },

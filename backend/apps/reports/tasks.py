@@ -1,31 +1,36 @@
 from celery import shared_task
+from django.db import connection
 from django.utils import timezone
 from .models import ReportExecution
 
 
 @shared_task
 def generate_report(execution_id):
-    from .models import ReportExecution
-    
     try:
-        execution = ReportExecution.objects.get(id=execution_id)
+        execution = ReportExecution.objects.select_related('report').get(id=execution_id)
         execution.status = 'running'
         execution.started_at = timezone.now()
         execution.save()
-        
-        # TODO: Implement actual report generation logic
-        # This would involve:
-        # 1. Executing the SQL query with parameters
-        # 2. Formatting the results
-        # 3. Generating a file (PDF, Excel, CSV)
-        # 4. Uploading to S3
-        # 5. Updating the execution with the file URL
-        
+
+        report = execution.report
+        query = (execution.parameters or {}).get('query') or report.query
+        if not query or not query.strip().lower().startswith('select'):
+            raise ValueError('Report query must be a SELECT statement.')
+
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            columns = [col[0] for col in cursor.description] if cursor.description else []
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        execution.result_data = {
+            'rows': rows,
+            'columns': columns,
+            'row_count': len(rows),
+        }
         execution.status = 'completed'
         execution.completed_at = timezone.now()
-        execution.result_data = {'message': 'Report generated successfully'}
+        execution.error_message = ''
         execution.save()
-        
     except Exception as e:
         execution.status = 'failed'
         execution.error_message = str(e)

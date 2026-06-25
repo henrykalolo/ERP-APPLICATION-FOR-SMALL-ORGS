@@ -24,6 +24,23 @@ export default function OrdersPage() {
     }
   }
 
+  function applyFilter(value: string) {
+    setStatusFilter(value)
+    loadDataWithFilter(value)
+  }
+
+  async function loadDataWithFilter(status: string) {
+    try {
+      setLoading(true)
+      const data = await operationsApi.orders.list(status ? { status } : undefined)
+      setOrders(data)
+    } catch (err) {
+      setError('Unable to load orders')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleAction(id: number, action: 'confirm' | 'calculateTotals') {
     try {
       setError('')
@@ -42,7 +59,7 @@ export default function OrdersPage() {
     <div className="space-y-6">
       <PageHeader title="Orders" description="Sales orders, confirmation, and totals" />
       <Card title="Order Filter">
-        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} onBlur={loadData}>
+        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => applyFilter(event.target.value)}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="confirmed">Confirmed</option>

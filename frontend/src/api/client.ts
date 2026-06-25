@@ -2,13 +2,6 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
 export interface PaginatedResponse<T> {
   count: number;
   next: string | null;
@@ -16,23 +9,36 @@ export interface PaginatedResponse<T> {
   results: T[];
 }
 
-const unwrapPaginatedResponse = (response: any) => {
+const apiClient = axios.create({
+  baseURL: `${API_BASE_URL}/api/v1`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+const unwrapPaginatedResponse = (response: { data: PaginatedResponse<any> | any }) => {
   if (
-    response.config?.method?.toLowerCase() === 'get' &&
     response.data &&
     typeof response.data === 'object' &&
-    Array.isArray(response.data.results)
+    'results' in response.data &&
+    Array.isArray((response.data as PaginatedResponse<any>).results)
   ) {
     return {
       ...response,
-      data: response.data.results,
+      data: (response.data as PaginatedResponse<any>).results,
     };
   }
-
   return response;
 };
 
-// Add token to requests
+export function requestPaginated<T>(path: string, params?: Record<string, any>): Promise<T[]> {
+  return apiClient.get<PaginatedResponse<T>>(path, { params }).then(res => res.data.results)
+}
+
+export function request<T>(path: string, params?: Record<string, any>): Promise<T> {
+  return apiClient.get<T>(path, { params }).then(res => res.data)
+}
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -44,34 +50,33 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle token refresh
 apiClient.interceptors.response.use(
-  unwrapPaginatedResponse,
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       try {
         const refreshToken = localStorage.getItem('refresh_token');
         const response = await axios.post(`${API_BASE_URL}/api/v1/auth/token/refresh/`, {
           refresh: refreshToken,
         });
-        
+
         const { access } = response.data;
         localStorage.setItem('access_token', access);
-        
+
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        window.location.replace('/login');
         return Promise.reject(refreshError);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

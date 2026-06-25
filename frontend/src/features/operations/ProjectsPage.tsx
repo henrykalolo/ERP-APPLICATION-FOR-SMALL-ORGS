@@ -24,11 +24,28 @@ export default function ProjectsPage() {
     }
   }
 
+  function applyFilter(value: string) {
+    setStatusFilter(value)
+    loadDataWithFilter(value)
+  }
+
+  async function loadDataWithFilter(status: string) {
+    try {
+      setLoading(true)
+      const data = await operationsApi.projects.list(status ? { status } : undefined)
+      setProjects(data)
+    } catch (err) {
+      setError('Unable to load projects')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Projects" description="Project status and Kanban-ready workflow data" />
       <Card title="Project Filter">
-        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} onBlur={loadData}>
+        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => applyFilter(event.target.value)}>
           <option value="">All statuses</option>
           <option value="planning">Planning</option>
           <option value="in_progress">In Progress</option>

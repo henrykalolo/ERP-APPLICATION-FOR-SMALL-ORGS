@@ -24,6 +24,23 @@ export default function InvoicesPage() {
     }
   }
 
+  function applyFilter(value: string) {
+    setStatusFilter(value)
+    loadDataWithFilter(value)
+  }
+
+  async function loadDataWithFilter(status: string) {
+    try {
+      setLoading(true)
+      const data = await financeApi.invoices.list(status ? { status } : undefined)
+      setInvoices(data)
+    } catch (err) {
+      setError('Unable to load invoices')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleAction(id: number, action: 'approve' | 'postToLedger') {
     try {
       setError('')
@@ -42,7 +59,7 @@ export default function InvoicesPage() {
     <div className="space-y-6">
       <PageHeader title="Invoices" description="Approve invoices and post them to the ledger" />
       <Card title="Filters">
-        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} onBlur={loadData}>
+        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => applyFilter(event.target.value)}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="sent">Sent</option>

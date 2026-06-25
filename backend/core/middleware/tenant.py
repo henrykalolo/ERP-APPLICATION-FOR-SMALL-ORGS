@@ -1,34 +1,39 @@
-from django_tenants.middleware import TenantMiddleware
-from django_tenants.models import Tenant
+from django.apps import apps
+from django.db.models import Q
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
+from apps.core.threadlocals import set_current_request
+
 
 class TenantMiddleware(MiddlewareMixin):
     def process_request(self, request):
-        # Get tenant identifier from subdomain or URL path
-        subdomain = request.get_host().split('.')[0] if '.' in request.get_host() else None
-        path_tenant = request.path.strip('/').split('/')[0] if '/' in request.path else None
+        set_current_request(request)
 
-        # Resolve tenant from subdomain or path
+        host = request.get_host().split(':')[0]
+        subdomain = host.split('.')[0] if '.' in host else None
+        path_tenant = request.path.strip('/').split('/')[0] if request.path.strip('/') else None
+
         tenant = None
-        if subdomain:
-            tenant = settings.TENANT_MODEL.get_queryset().get(slug=subdomain)
-        elif path_tenant:
-            tenant = settings.TENANT_MODEL.get_queryset().get(slug=path_tenant)
+        try:
+            tenant_model = apps.get_model(settings.TENANT_MODEL)
+            if subdomain:
+                tenant = tenant_model.objects.filter(slug=subdomain, is_active=True).first()
+            if tenant is None and path_tenant:
+                tenant = tenant_model.objects.filter(slug=path_tenant, is_active=True).first()
+        except Exception:
+            tenant = None
 
-        # Set tenant context
         if tenant:
             request.tenant = tenant
             settings.tenant = tenant
-            # Switch database schema using django_tenants
-            from django_tenants.backends.postgresql import context
-            context.switch_context(tenant.schema_name)
 
-        # Add tenant selector to request
-        request.tenant_selector = TenantMiddleware.TenantSelector()
+        request.tenant_selector = self.TenantSelector
+
+    def process_response(self, request, response):
+        set_current_request(None)
+        return response
 
     @property
     def TenantSelector(self):
-        """Filter form choices to active tenants"""
         from django_tenants.querysets import TenantSelect
         return TenantSelect(Q(is_active=True))

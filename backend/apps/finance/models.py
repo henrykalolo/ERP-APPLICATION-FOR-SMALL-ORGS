@@ -154,7 +154,8 @@ class Invoice(TenantScopedModel):
 
     def calculate_totals(self):
         subtotal = sum(line.quantity * line.unit_price for line in self.lines.all())
-        tax_amount = subtotal * 0.16  # 16% VAT
+        tax_rate = getattr(self, 'tax_rate', 0.16)
+        tax_amount = subtotal * tax_rate
         total_amount = subtotal + tax_amount
         
         self.subtotal = subtotal

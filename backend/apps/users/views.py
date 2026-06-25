@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 from apps.core.views import BaseModelViewSet
 from .models import User, Role, Permission
 from .serializers import UserSerializer, UserCreateSerializer, RoleSerializer, PermissionSerializer, LoginSerializer
@@ -68,6 +69,8 @@ class TokenRefreshView(APIView):
 
         try:
             token = RefreshToken(refresh)
+            if hasattr(token, 'blacklist'):
+                token.blacklist()
             return Response({'access': str(token.access_token)})
         except Exception:
             return Response({'error': 'Invalid refresh token'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -77,6 +80,13 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except Exception:
+                pass
         return Response({'message': 'Logged out successfully'})
 
 
@@ -95,11 +105,6 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return UserCreateSerializer
         return UserSerializer
-    
-    @action(detail=False, methods=['get'])
-    def me(self, request):
-        serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
 
 
 class RoleViewSet(viewsets.ModelViewSet):

@@ -1,4 +1,4 @@
-import apiClient from './client';
+import apiClient, { requestPaginated } from './client';
 
 export interface Report {
   id: number;

@@ -42,7 +42,8 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function Money({ amount, currency = 'MWK' }: { amount: number | string | null | undefined; currency?: string }) {
   if (amount === null || amount === undefined || amount === '') return <span>-</span>
-  return <span>{currency} {amount}</span>
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  return <span>{currency} {num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
 }
 
 export function LoadingState({ label = 'Loading...' }: { label?: string }) {
@@ -61,3 +62,5 @@ export function EmptyState({ title, description }: { title: string; description?
 export function ErrorState({ message }: { message: string }) {
   return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">{message}</div>
 }
+
+export { Skeleton, CardSkeleton, TableSkeleton, FormSkeleton } from './Skeleton'

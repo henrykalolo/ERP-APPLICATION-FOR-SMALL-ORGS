@@ -24,6 +24,23 @@ export default function JournalPage() {
     }
   }
 
+  function applyFilter(value: string) {
+    setStatusFilter(value)
+    loadDataWithFilter(value)
+  }
+
+  async function loadDataWithFilter(status: string) {
+    try {
+      setLoading(true)
+      const data = await financeApi.journalEntries.list(status ? { status } : undefined)
+      setEntries(data)
+    } catch (err) {
+      setError('Unable to load journal entries')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function postEntry(id: number) {
     try {
       setError('')
@@ -38,7 +55,7 @@ export default function JournalPage() {
     <div className="space-y-6">
       <PageHeader title="Journal Entries" description="Review and post double-entry journal records" />
       <Card title="Filters">
-        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} onBlur={loadData}>
+        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => applyFilter(event.target.value)}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
           <option value="posted">Posted</option>

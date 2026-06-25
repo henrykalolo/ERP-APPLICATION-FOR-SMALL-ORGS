@@ -9,26 +9,14 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
-    loadData()
+    loadDataWithFilter('')
   }, [])
-
-  async function loadData() {
-    try {
-      setLoading(true)
-      const data = await operationsApi.leads.list(statusFilter ? { status: statusFilter } : undefined)
-      setLeads(data)
-    } catch (err) {
-      setError('Unable to load leads')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function convertLead(id: number) {
     try {
       setError('')
       await operationsApi.leads.convertToCustomer(id)
-      await loadData()
+      await loadDataWithFilter(statusFilter)
     } catch (err) {
       setError('Unable to convert lead')
     }
@@ -38,7 +26,7 @@ export default function LeadsPage() {
     <div className="space-y-6">
       <PageHeader title="Leads" description="CRM pipeline and lead conversion" />
       <Card title="Pipeline Filter">
-        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} onBlur={loadData}>
+        <select className="rounded-md border-gray-300 text-sm" value={statusFilter} onChange={(event) => applyFilter(event.target.value)}>
           <option value="">All stages</option>
           <option value="new">New</option>
           <option value="contacted">Contacted</option>

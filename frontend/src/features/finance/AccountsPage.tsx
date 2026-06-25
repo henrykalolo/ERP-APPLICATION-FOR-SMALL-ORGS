@@ -24,11 +24,28 @@ export default function AccountsPage() {
     }
   }
 
+  function applyFilter(value: string) {
+    setTypeFilter(value)
+    loadDataWithFilter(value)
+  }
+
+  async function loadDataWithFilter(type: string) {
+    try {
+      setLoading(true)
+      const data = await financeApi.accounts.list(type ? { account_type: type } : undefined)
+      setAccounts(data)
+    } catch (err) {
+      setError('Unable to load accounts')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="Accounts" description="Chart of accounts for tenant accounting" />
       <Card title="Filters">
-        <select className="rounded-md border-gray-300 text-sm" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} onBlur={loadData}>
+        <select className="rounded-md border-gray-300 text-sm" value={typeFilter} onChange={(event) => applyFilter(event.target.value)}>
           <option value="">All account types</option>
           <option value="asset">Asset</option>
           <option value="liability">Liability</option>

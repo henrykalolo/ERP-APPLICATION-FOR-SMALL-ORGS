@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import transaction
 from django.utils import timezone
 from apps.core.views import BaseModelViewSet
 from .models import (Account, JournalEntry, JournalEntryLine, AccountingPeriod, 
@@ -136,82 +137,76 @@ class InvoiceViewSet(BaseModelViewSet):
         if invoice.posted:
             return Response({'error': 'Invoice already posted'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Create journal entry for invoice
-        # This is a simplified version - in production, you'd want more robust logic
-        from .models import JournalEntry, JournalEntryLine, AccountingPeriod, Account
-        
-        period = AccountingPeriod.objects.filter(
-            tenant=request.tenant,
-            start_date__lte=invoice.date,
-            end_date__gte=invoice.date,
-            is_closed=False
-        ).first()
-        
-        if not period:
-            return Response({'error': 'No active accounting period found'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        journal_entry = JournalEntry.objects.create(
-            entry_number=f"INV-{invoice.invoice_number}",
-            date=invoice.date,
-            description=f"Invoice {invoice.invoice_number} - {invoice.customer.name}",
-            period=period,
-            tenant=request.tenant,
-            created_by=request.user
-        )
-        
-        # Debit Accounts Receivable
-        receivable_account = Account.objects.filter(
-            tenant=request.tenant,
-            account_type='asset',
-            code__icontains='receivable'
-        ).first()
-        
-        if receivable_account:
-            JournalEntryLine.objects.create(
-                journal_entry=journal_entry,
-                account=receivable_account,
-                description=f"Invoice {invoice.invoice_number}",
-                debit_amount=invoice.total_amount,
-                credit_amount=0,
-                tenant=request.tenant
+        with transaction.atomic():
+            period = AccountingPeriod.objects.filter(
+                tenant=request.tenant,
+                start_date__lte=invoice.date,
+                end_date__gte=invoice.date,
+                is_closed=False
+            ).first()
+            
+            if not period:
+                raise ValueError('No active accounting period found')
+            
+            journal_entry = JournalEntry.objects.create(
+                entry_number=f"INV-{invoice.invoice_number}",
+                date=invoice.date,
+                description=f"Invoice {invoice.invoice_number} - {invoice.customer.name}",
+                period=period,
+                tenant=request.tenant,
+                created_by=request.user
             )
-        
-        # Credit Revenue
-        revenue_account = Account.objects.filter(
-            tenant=request.tenant,
-            account_type='revenue'
-        ).first()
-        
-        if revenue_account:
-            JournalEntryLine.objects.create(
-                journal_entry=journal_entry,
-                account=revenue_account,
-                description=f"Invoice {invoice.invoice_number}",
-                debit_amount=0,
-                credit_amount=invoice.subtotal,
-                tenant=request.tenant
-            )
-        
-        # Credit VAT Liability
-        vat_account = Account.objects.filter(
-            tenant=request.tenant,
-            account_type='liability',
-            code__icontains='vat'
-        ).first()
-        
-        if vat_account:
-            JournalEntryLine.objects.create(
-                journal_entry=journal_entry,
-                account=vat_account,
-                description=f"VAT on Invoice {invoice.invoice_number}",
-                debit_amount=0,
-                credit_amount=invoice.tax_amount,
-                tenant=request.tenant
-            )
-        
-        invoice.posted = True
-        invoice.posted_at = timezone.now()
-        invoice.save()
+            
+            receivable_account = Account.objects.filter(
+                tenant=request.tenant,
+                account_type='asset',
+                code__icontains='receivable'
+            ).first()
+            
+            if receivable_account:
+                JournalEntryLine.objects.create(
+                    journal_entry=journal_entry,
+                    account=receivable_account,
+                    description=f"Invoice {invoice.invoice_number}",
+                    debit_amount=invoice.total_amount,
+                    credit_amount=0,
+                    tenant=request.tenant
+                )
+            
+            revenue_account = Account.objects.filter(
+                tenant=request.tenant,
+                account_type='revenue'
+            ).first()
+            
+            if revenue_account:
+                JournalEntryLine.objects.create(
+                    journal_entry=journal_entry,
+                    account=revenue_account,
+                    description=f"Invoice {invoice.invoice_number}",
+                    debit_amount=0,
+                    credit_amount=invoice.subtotal,
+                    tenant=request.tenant
+                )
+            
+            vat_account = Account.objects.filter(
+                tenant=request.tenant,
+                account_type='liability',
+                code__icontains='vat'
+            ).first()
+            
+            if vat_account:
+                JournalEntryLine.objects.create(
+                    journal_entry=journal_entry,
+                    account=vat_account,
+                    description=f"VAT on Invoice {invoice.invoice_number}",
+                    debit_amount=0,
+                    credit_amount=invoice.tax_amount,
+                    tenant=request.tenant
+                )
+            
+            invoice.posted = True
+            invoice.posted_at = timezone.now()
+            invoice.save()
         
         return Response({'message': 'Invoice posted to ledger successfully', 'journal_entry_id': journal_entry.id})
 

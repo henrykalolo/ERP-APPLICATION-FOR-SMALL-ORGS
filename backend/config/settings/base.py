@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django_tenants',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'django_celery_beat',
     'djmoney',
     'apps.core',
@@ -72,17 +73,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
+        'ENGINE': os.getenv('DATABASE_ENGINE', 'django.db.backends.sqlite3'),
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 
 TENANT_SYNC_ROUTER = 'config.routers.SqliteTenantSyncRouter'
 
-if os.getenv('SMALLORG_DISABLE_TENANT_ROUTER') == 'True':
-    DATABASE_ROUTERS = []
-else:
+# Local development uses SQLite with tenant_id filtering rather than PostgreSQL schema switching.
+if os.getenv('SMALLORG_ENABLE_TENANT_ROUTER', 'False') == 'True':
     DATABASE_ROUTERS = (TENANT_SYNC_ROUTER,)
+else:
+    DATABASE_ROUTERS = []
 
 TENANT_MODEL = 'tenants.Tenant'
 TENANT_CACHE = 'default'
@@ -127,12 +129,16 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ALGORITHM': 'HS256',
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 # Celery configuration - optional for local development
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 CELERY_BEAT_SCHEDULE = {}
+
+VAT_RATE = float(os.getenv('VAT_RATE', '0.16'))
+DEFAULT_CURRENCY = os.getenv('DEFAULT_CURRENCY', 'MWK')
 
 STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
