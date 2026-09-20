@@ -1,109 +1,77 @@
-# SmallOrg Central - Local Development Setup
+# SmallOrg Central
 
-## Backend (Django)
+A modular enterprise resource planning platform for small organizations, combining a Django REST backend with a React/Vite frontend.
 
-### Prerequisites
+## Modules
+
+- Human resources: employees, departments, leave, and attendance
+- Finance: accounts, invoices, and budgets
+- Operations: customers, leads, products, and orders
+- Document management
+- Authentication and notifications
+- Reporting and administrative workflows
+
+## Technology
+
 - Python 3.12+
-- pip
+- Django
+- React with Vite
+- SQLite for local development
+- PostgreSQL recommended for production
+- Redis and Celery for optional background tasks
 
-### Setup
+## Local installation
 
-1. Install dependencies:
+```bash
+git clone https://github.com/henrykalolo/ERP-APPLICATION-FOR-SMALL-ORGS.git
+cd ERP-APPLICATION-FOR-SMALL-ORGS
+```
+
+### Backend
+
 ```bash
 cd backend
+python -m venv .venv
+source .venv/bin/activate       # Windows: .venv\\Scripts\\activate
 pip install -r requirements/base.txt
-pip install python-dotenv  # For .env file support
-```
-
-2. Configure environment variables:
-```bash
-# .env file is already created with defaults
-# You can edit backend/.env if needed
-```
-
-3. Run migrations:
-```bash
-python manage.py makemigrations
 python manage.py migrate
-```
-
-4. Create a superuser:
-```bash
 python manage.py createsuperuser
-```
-
-5. Run the development server:
-```bash
 python manage.py runserver
 ```
 
-The API will be available at `http://localhost:8000`
+The API is available at `http://localhost:8000` and the admin interface at `http://localhost:8000/admin`.
 
-## Frontend (React + Vite)
+### Frontend
 
-### Prerequisites
-- Node.js 18+
-- npm or pnpm
-
-### Setup
-
-1. Install dependencies:
 ```bash
 cd frontend
 npm install
-```
-
-2. Configure environment:
-```bash
-# Copy .env.example to .env
 cp .env.example .env
-```
-
-3. Run the development server:
-```bash
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`
+The frontend is available at `http://localhost:5173`.
 
-## Optional: Celery/Redis for Background Tasks
+### Optional background workers
 
-If you want to use background tasks (Celery), you'll need Redis:
-
-1. Install Redis locally or use Docker:
 ```bash
-docker run -d -p 6379:6379 redis
-```
-
-2. Update backend/.env to include:
-```
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_BACKEND=redis://localhost:6379/0
-```
-
-3. Run Celery worker:
-```bash
+docker run -d --name smallorg-redis -p 6379:6379 redis
 cd backend
 celery -A config worker -l info
 ```
 
-## Database
+## Development notes
 
-- **Development**: SQLite (default, no setup required)
-- **Production**: PostgreSQL (requires configuration)
+Keep credentials in environment variables, not source control. Use SQLite only for local development; configure PostgreSQL and restricted hosts/CORS settings for production.
 
-## API Endpoints
+## Documentation
 
-- API Base URL: `http://localhost:8000/api/v1`
-- Admin: `http://localhost:8000/admin`
-- Health Check: `http://localhost:8000/health/`
+See [orgsysdoc (1).md](orgsysdoc%20(1).md) for the detailed system specification.
 
-## Modules
+## Contributing
 
-- **HR**: `/api/v1/hr/` - Employees, Departments, Leave, Attendance
-- **Finance**: `/api/v1/finance/` - Accounts, Invoices, Budgets
-- **Operations**: `/api/v1/operations/` - Customers, Leads, Products, Orders
-- **DMS**: `/api/v1/dms/` - Documents, Folders
-- **Auth**: `/api/v1/auth/` - Authentication
-- **Notifications**: `/api/v1/notifications/` - Notifications
-- **Reports**: `/api/v1/reports/` - Report generation
+Use focused branches, include tests for changes, and document API or database changes in pull requests.
+
+## License
+
+License terms will be added when finalized.
